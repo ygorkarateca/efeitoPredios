@@ -50,13 +50,6 @@
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       margin-bottom: 12px;
     }
-    .tool {
-      display: flex; gap: 10px; align-items: center; justify-content: space-between;
-      background: rgba(0,0,0,.04);
-      border: 1px solid rgba(0,0,0,.06);
-      border-radius: 10px;
-      padding: 8px 10px;
-    }
     [data-theme="dark"] .tool {
       background: rgba(255,255,255,.04);
       border-color: rgba(255,255,255,.12);
@@ -115,6 +108,24 @@
       select, input[type="file"], button { width: 100%; }
     }
 
+    /* Estilos para o formulário de edição */
+    #editForm {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    #editInputs div {
+      margin-bottom: 10px;
+    }
+    #editInputs input {
+      margin-left: 10px;
+      width: 80px;
+    }
+    #saveBtn, #cancelBtn {
+      margin-right: 10px;
+    }
+
   </style>
 </head>
 <body>
@@ -133,12 +144,23 @@
         <div class="tool">
           <label><input type="checkbox" id="temaEscuro" /> Tema escuro</label>
         </div>
+        <div class="tool">
+          <button id="editBtn">Editar Efetivo</button>
+        </div>
       </div>
 
       <!-- Gráfico -->
 
       <div class="canvas-box">
         <div id="chartContainer"></div>
+      </div>
+
+      <!-- Formulário de edição -->
+      <div id="editForm" style="display: none; margin-top: 20px;">
+        <h3>Editar Efetivo dos Prédios</h3>
+        <div id="editInputs"></div>
+        <button id="saveBtn">Salvar</button>
+        <button id="cancelBtn">Cancelar</button>
       </div>
     </div>
   </div>
@@ -169,21 +191,28 @@
 
   <script>
     // ======== Local de alterar o efetivo dos prédios ========
+    const defaultData = [
+      [677, 400, 160],  // EDIHB: Empregado, Funcionário, Visitante
+      [8, 169, 13],    // EDISE
+      [3115, 1504, 242] // EDISEN
+    ];
+    const storedData = localStorage.getItem('buildingData');
     const state = {
       vista: 'total',
       temaEscuro: false,
       categories: ['Empregado', 'Funcionário', 'Visitante'],
-      buildingData: [
-        [677, 400, 160],  // EDIHB: Empregado, Funcionário, Visitante
-        [8, 169, 13],    // EDISE
-        [3115, 1504, 242] // EDISEN
-      ],
+      buildingData: storedData ? JSON.parse(storedData) : defaultData,
       colors: ['#2ECC71', '#D3D3D3', '#FFA500']
     };
 
     // ======== DOM ========
     const elVista = document.getElementById('vista');
     const elTema = document.getElementById('temaEscuro');
+    const elEditBtn = document.getElementById('editBtn');
+    const elEditForm = document.getElementById('editForm');
+    const elEditInputs = document.getElementById('editInputs');
+    const elSaveBtn = document.getElementById('saveBtn');
+    const elCancelBtn = document.getElementById('cancelBtn');
 
     // ======== Helpers ========
     const sum = arr => arr.reduce((a,b) => a+b, 0);
@@ -309,11 +338,56 @@
       }
     }
 
+    // ======== Funções de edição ========
+    function showEditForm() {
+      elEditInputs.innerHTML = '';
+      const buildingNames = ['EDIHB', 'EDISE', 'EDISEN'];
+      const categories = state.categories;
+      buildingNames.forEach((building, i) => {
+        const div = document.createElement('div');
+        div.innerHTML = `<h4>${building}</h4>`;
+        categories.forEach((cat, j) => {
+          const input = document.createElement('input');
+          input.type = 'number';
+          input.value = state.buildingData[i][j];
+          input.dataset.building = i;
+          input.dataset.category = j;
+          div.appendChild(document.createTextNode(`${cat}: `));
+          div.appendChild(input);
+          div.appendChild(document.createElement('br'));
+        });
+        elEditInputs.appendChild(div);
+      });
+      elEditForm.style.display = 'block';
+    }
+
     // ======== Eventos ========
     elVista.addEventListener('change', () => { state.vista = elVista.value; render(); });
     elTema.addEventListener('change', () => {
       state.temaEscuro = elTema.checked;
       document.body.setAttribute('data-theme', state.temaEscuro ? 'dark' : 'light');
+    });
+    elEditBtn.addEventListener('click', () => {
+      const password = prompt('Digite a senha para editar:');
+      if (password === 'cisp2026') {
+        showEditForm();
+      } else {
+        alert('Senha incorreta!');
+      }
+    });
+    elSaveBtn.addEventListener('click', () => {
+      const inputs = elEditInputs.querySelectorAll('input');
+      inputs.forEach(input => {
+        const i = parseInt(input.dataset.building);
+        const j = parseInt(input.dataset.category);
+        state.buildingData[i][j] = parseInt(input.value) || 0;
+      });
+      localStorage.setItem('buildingData', JSON.stringify(state.buildingData));
+      elEditForm.style.display = 'none';
+      render();
+    });
+    elCancelBtn.addEventListener('click', () => {
+      elEditForm.style.display = 'none';
     });
 
 
