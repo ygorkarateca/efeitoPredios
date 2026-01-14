@@ -196,14 +196,42 @@
       [8, 169, 13],    // EDISE
       [3115, 1504, 242] // EDISEN
     ];
-    const storedData = localStorage.getItem('buildingData');
     const state = {
       vista: 'total',
       temaEscuro: false,
       categories: ['Empregado', 'Funcionário', 'Visitante'],
-      buildingData: storedData ? JSON.parse(storedData) : defaultData,
+      buildingData: defaultData,
       colors: ['#2ECC71', '#D3D3D3', '#FFA500']
     };
+
+    // Load data from server
+    async function loadData() {
+      try {
+        const response = await fetch('/data');
+        if (response.ok) {
+          state.buildingData = await response.json();
+        }
+      } catch (err) {
+        console.error('Error loading data:', err);
+      }
+    }
+
+    // Save data to server
+    async function saveData() {
+      try {
+        const response = await fetch('/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state.buildingData)
+        });
+        if (!response.ok) {
+          alert('Erro ao salvar dados!');
+        }
+      } catch (err) {
+        console.error('Error saving data:', err);
+        alert('Erro ao salvar dados!');
+      }
+    }
 
     // ======== DOM ========
     const elVista = document.getElementById('vista');
@@ -375,14 +403,14 @@
         alert('Senha incorreta!');
       }
     });
-    elSaveBtn.addEventListener('click', () => {
+    elSaveBtn.addEventListener('click', async () => {
       const inputs = elEditInputs.querySelectorAll('input');
       inputs.forEach(input => {
         const i = parseInt(input.dataset.building);
         const j = parseInt(input.dataset.category);
         state.buildingData[i][j] = parseInt(input.value) || 0;
       });
-      localStorage.setItem('buildingData', JSON.stringify(state.buildingData));
+      await saveData();
       elEditForm.style.display = 'none';
       render();
     });
@@ -392,7 +420,10 @@
 
 
     // Inicializa
-    render();
+    (async () => {
+      await loadData();
+      render();
+    })();
   </script>
 </body>
 </html>
